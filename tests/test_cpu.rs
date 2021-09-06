@@ -114,12 +114,12 @@ fn cpu_add_carry() {
     let mut cpu = CPU::default();
 
     cpu.registers.a = 0xFF;
-    cpu.registers.c = 1;
+    cpu.registers.c = 2;
 
     cpu.execute(Instruction::ADD(ArithmeticTarget::C));
 
-    assert_eq!(0, cpu.registers.a);
-    assert_eq!(1, cpu.registers.c);
+    assert_eq!(1, cpu.registers.a);
+    assert_eq!(2, cpu.registers.c);
 
     let expected_flags = FlagsRegister {
         zero: false,
