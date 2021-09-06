@@ -1,8 +1,10 @@
 extern crate game_boy_emulator;
 
+use game_boy_emulator::cpu::*;
+
 #[test]
 fn set_get_bc_register() {
-    let mut registers = game_boy_emulator::cpu::Registers::default();
+    let mut registers = Registers::default();
 
     registers.set_bc(23);
 
@@ -13,21 +15,21 @@ fn set_get_bc_register() {
 fn byte_to_flag_register() {
     let byte: u8 = 0b10100000;
 
-    let expected = game_boy_emulator::cpu::FlagsRegister {
+    let expected = FlagsRegister {
         zero: true,
         subtract: false,
         half_carry: true,
         carry: false,
     };
 
-    let actual = game_boy_emulator::cpu::FlagsRegister::from(byte);
+    let actual = FlagsRegister::from(byte);
 
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn flag_register_to_byte() {
-    let flag_register = game_boy_emulator::cpu::FlagsRegister {
+    let flag_register = FlagsRegister {
         zero: true,
         subtract: false,
         half_carry: true,
