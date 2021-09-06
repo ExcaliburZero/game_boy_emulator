@@ -5,7 +5,7 @@ pub struct Registers {
     pub c: u8,
     pub d: u8,
     pub e: u8,
-    pub f: u8,
+    pub f: FlagsRegister,
     pub h: u8,
     pub l: u8,
 }
@@ -29,7 +29,7 @@ const SUBTRACT_FLAG_BYTE_POSITION: u8 = 6;
 const HALF_CARRY_FLAG_BYTE_POSITION: u8 = 5;
 const CARRY_FLAG_BYTE_POSITION: u8 = 4;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct FlagsRegister {
     pub zero: bool,
     pub subtract: bool,
