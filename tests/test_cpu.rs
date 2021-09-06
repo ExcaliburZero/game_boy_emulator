@@ -42,3 +42,91 @@ fn flag_register_to_byte() {
 
     assert_eq!(expected, actual);
 }
+
+#[test]
+fn cpu_add_simple() {
+    let mut cpu = CPU::default();
+
+    cpu.registers.a = 1;
+    cpu.registers.c = 2;
+
+    cpu.execute(Instruction::ADD(ArithmeticTarget::C));
+
+    assert_eq!(3, cpu.registers.a);
+    assert_eq!(2, cpu.registers.c);
+
+    let expected_flags = FlagsRegister {
+        zero: false,
+        subtract: false,
+        half_carry: false,
+        carry: false,
+    };
+
+    assert_eq!(expected_flags, cpu.registers.f);
+}
+
+#[test]
+fn cpu_add_zero() {
+    let mut cpu = CPU::default();
+
+    cpu.registers.a = 0;
+    cpu.registers.c = 0;
+
+    cpu.execute(Instruction::ADD(ArithmeticTarget::C));
+
+    assert_eq!(0, cpu.registers.a);
+    assert_eq!(0, cpu.registers.c);
+
+    let expected_flags = FlagsRegister {
+        zero: true,
+        subtract: false,
+        half_carry: false,
+        carry: false,
+    };
+
+    assert_eq!(expected_flags, cpu.registers.f);
+}
+
+#[test]
+fn cpu_add_half_carry() {
+    let mut cpu = CPU::default();
+
+    cpu.registers.a = 0x0F;
+    cpu.registers.c = 1;
+
+    cpu.execute(Instruction::ADD(ArithmeticTarget::C));
+
+    assert_eq!(0x10, cpu.registers.a);
+    assert_eq!(1, cpu.registers.c);
+
+    let expected_flags = FlagsRegister {
+        zero: false,
+        subtract: false,
+        half_carry: true,
+        carry: false,
+    };
+
+    assert_eq!(expected_flags, cpu.registers.f);
+}
+
+#[test]
+fn cpu_add_carry() {
+    let mut cpu = CPU::default();
+
+    cpu.registers.a = 0xFF;
+    cpu.registers.c = 1;
+
+    cpu.execute(Instruction::ADD(ArithmeticTarget::C));
+
+    assert_eq!(0, cpu.registers.a);
+    assert_eq!(1, cpu.registers.c);
+
+    let expected_flags = FlagsRegister {
+        zero: false,
+        subtract: false,
+        half_carry: true,
+        carry: true,
+    };
+
+    assert_eq!(expected_flags, cpu.registers.f);
+}
