@@ -50,10 +50,12 @@ fn cpu_add_simple() {
     cpu.registers.a = 1;
     cpu.registers.c = 2;
 
-    cpu.execute(Instruction::ADD(ArithmeticTarget::C));
+    let pc = cpu.execute(Instruction::ADD(ArithmeticTarget::C));
 
     assert_eq!(3, cpu.registers.a);
     assert_eq!(2, cpu.registers.c);
+
+    assert_eq!(1, pc);
 
     let expected_flags = FlagsRegister {
         zero: false,
@@ -72,10 +74,12 @@ fn cpu_add_zero() {
     cpu.registers.a = 0;
     cpu.registers.c = 0;
 
-    cpu.execute(Instruction::ADD(ArithmeticTarget::C));
+    let pc = cpu.execute(Instruction::ADD(ArithmeticTarget::C));
 
     assert_eq!(0, cpu.registers.a);
     assert_eq!(0, cpu.registers.c);
+
+    assert_eq!(1, pc);
 
     let expected_flags = FlagsRegister {
         zero: true,
@@ -94,10 +98,12 @@ fn cpu_add_half_carry() {
     cpu.registers.a = 0x0F;
     cpu.registers.c = 1;
 
-    cpu.execute(Instruction::ADD(ArithmeticTarget::C));
+    let pc = cpu.execute(Instruction::ADD(ArithmeticTarget::C));
 
     assert_eq!(0x10, cpu.registers.a);
     assert_eq!(1, cpu.registers.c);
+
+    assert_eq!(1, pc);
 
     let expected_flags = FlagsRegister {
         zero: false,
@@ -116,10 +122,12 @@ fn cpu_add_carry() {
     cpu.registers.a = 0xFF;
     cpu.registers.c = 2;
 
-    cpu.execute(Instruction::ADD(ArithmeticTarget::C));
+    let pc = cpu.execute(Instruction::ADD(ArithmeticTarget::C));
 
     assert_eq!(1, cpu.registers.a);
     assert_eq!(2, cpu.registers.c);
+
+    assert_eq!(1, pc);
 
     let expected_flags = FlagsRegister {
         zero: false,

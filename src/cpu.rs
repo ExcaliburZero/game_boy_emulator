@@ -1,10 +1,24 @@
 #[derive(Default)]
 pub struct CPU {
     pub registers: Registers,
+    pub pc: u16,
+    pub bus: MemoryBus,
 }
 
 impl CPU {
-    pub fn execute(&mut self, instruction: Instruction) {
+    pub fn step(&mut self) {
+        let instruction_byte = self.bus.read_byte(self.pc);
+
+        let next_pc = if let Some(instruction) = Instruction::from_byte(instruction_byte) {
+            self.execute(instruction)
+        } else {
+            panic!("Unkown instruction found for: 0x{:x}", instruction_byte);
+        };
+
+        self.pc = next_pc;
+    }
+
+    pub fn execute(&mut self, instruction: Instruction) -> u16 {
         match instruction {
             Instruction::ADD(target) => {
                 match target {
@@ -12,11 +26,18 @@ impl CPU {
                         let value = self.registers.c;
                         let new_value = self.add(value);
                         self.registers.a = new_value;
+                        self.pc.wrapping_add(1)
                     }
-                    _ => { /* TODO: implement */ }
+                    _ => {
+                        /* TODO: implement */
+                        self.pc
+                    }
                 }
             }
-            _ => { /* TODO: implement other instructions */ }
+            _ => {
+                /* TODO: implement other instructions */
+                self.pc
+            }
         }
     }
 
@@ -32,6 +53,24 @@ impl CPU {
         self.registers.f.half_carry = (self.registers.a & 0xF) + (value & 0xF) > 0xF;
 
         new_value
+    }
+}
+
+pub struct MemoryBus {
+    memory: [u8; 0xFFFF],
+}
+
+impl MemoryBus {
+    fn read_byte(&self, address: u16) -> u8 {
+        self.memory[address as usize]
+    }
+}
+
+impl Default for MemoryBus {
+    fn default() -> Self {
+        MemoryBus {
+            memory: [0; 0xFFFF],
+        }
     }
 }
 
@@ -106,6 +145,21 @@ impl std::convert::From<u8> for FlagsRegister {
 
 pub enum Instruction {
     ADD(ArithmeticTarget),
+    INC(IncDecTarget),
+}
+
+impl Instruction {
+    fn from_byte(byte: u8) -> Option<Instruction> {
+        match byte {
+            0x02 => Some(Instruction::INC(IncDecTarget::BC)),
+            0x13 => Some(Instruction::INC(IncDecTarget::DE)),
+            _ =>
+            /* TODO: Add mapping for rest of instructions */
+            {
+                None
+            }
+        }
+    }
 }
 
 pub enum ArithmeticTarget {
@@ -116,4 +170,9 @@ pub enum ArithmeticTarget {
     E,
     H,
     L,
+}
+
+pub enum IncDecTarget {
+    BC,
+    DE,
 }
