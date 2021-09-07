@@ -7,12 +7,22 @@ pub struct CPU {
 
 impl CPU {
     pub fn step(&mut self) {
-        let instruction_byte = self.bus.read_byte(self.pc);
+        let mut instruction_byte = self.bus.read_byte(self.pc);
+        let prefixed = instruction_byte == 0xCB;
+        if prefixed {
+            instruction_byte = self.bus.read_byte(self.pc + 1);
+        }
 
-        let next_pc = if let Some(instruction) = Instruction::from_byte(instruction_byte) {
+        let next_pc = if let Some(instruction) = Instruction::from_byte(instruction_byte, prefixed)
+        {
             self.execute(instruction)
         } else {
-            panic!("Unkown instruction found for: 0x{:x}", instruction_byte);
+            let description = format!(
+                "0x{}{:x}",
+                if prefixed { "cb" } else { "" },
+                instruction_byte
+            );
+            panic!("Unkown instruction found for: {}", description)
         };
 
         self.pc = next_pc;
@@ -146,10 +156,30 @@ impl std::convert::From<u8> for FlagsRegister {
 pub enum Instruction {
     ADD(ArithmeticTarget),
     INC(IncDecTarget),
+    RLC(PrefixTarget),
 }
 
 impl Instruction {
-    fn from_byte(byte: u8) -> Option<Instruction> {
+    fn from_byte(byte: u8, prefixed: bool) -> Option<Instruction> {
+        if prefixed {
+            Instruction::from_byte_prefixed(byte)
+        } else {
+            Instruction::from_byte_not_prefixed(byte)
+        }
+    }
+
+    fn from_byte_prefixed(byte: u8) -> Option<Instruction> {
+        match byte {
+            0x00 => Some(Instruction::RLC(PrefixTarget::B)),
+            _ =>
+            /* TODO: Add mapping for rest of instructions */
+            {
+                None
+            }
+        }
+    }
+
+    fn from_byte_not_prefixed(byte: u8) -> Option<Instruction> {
         match byte {
             0x02 => Some(Instruction::INC(IncDecTarget::BC)),
             0x13 => Some(Instruction::INC(IncDecTarget::DE)),
@@ -175,4 +205,8 @@ pub enum ArithmeticTarget {
 pub enum IncDecTarget {
     BC,
     DE,
+}
+
+pub enum PrefixTarget {
+    B,
 }
