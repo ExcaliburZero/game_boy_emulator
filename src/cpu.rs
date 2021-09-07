@@ -7,22 +7,11 @@ pub struct CPU {
 
 impl CPU {
     pub fn step(&mut self) {
-        let mut instruction_byte = self.bus.read_byte(self.pc);
-        let prefixed = instruction_byte == 0xCB;
-        if prefixed {
-            instruction_byte = self.bus.read_byte(self.pc + 1);
-        }
-
-        let next_pc = if let Some(instruction) = Instruction::from_byte(instruction_byte, prefixed)
-        {
-            self.execute(instruction)
-        } else {
-            let description = format!(
-                "0x{}{:x}",
-                if prefixed { "cb" } else { "" },
-                instruction_byte
-            );
-            panic!("Unkown instruction found for: {}", description)
+        let next_pc = match Instruction::read_from_bus(&self.bus, self.pc) {
+            Ok(instruction) => self.execute(instruction),
+            Err(msg) => {
+                panic!("{}", msg)
+            }
         };
 
         self.pc = next_pc;
@@ -71,8 +60,12 @@ pub struct MemoryBus {
 }
 
 impl MemoryBus {
-    fn read_byte(&self, address: u16) -> u8 {
+    pub fn read_byte(&self, address: u16) -> u8 {
         self.memory[address as usize]
+    }
+
+    pub fn write_byte(&mut self, address: u16, byte: u8) {
+        self.memory[address as usize] = byte;
     }
 }
 
@@ -153,6 +146,7 @@ impl std::convert::From<u8> for FlagsRegister {
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub enum Instruction {
     ADD(ArithmeticTarget),
     INC(IncDecTarget),
@@ -160,6 +154,25 @@ pub enum Instruction {
 }
 
 impl Instruction {
+    pub fn read_from_bus(bus: &MemoryBus, pc: u16) -> Result<Instruction, String> {
+        let mut instruction_byte = bus.read_byte(pc);
+        let prefixed = instruction_byte == 0xCB;
+        if prefixed {
+            instruction_byte = bus.read_byte(pc + 1);
+        }
+
+        if let Some(instruction) = Instruction::from_byte(instruction_byte, prefixed) {
+            Ok(instruction)
+        } else {
+            let description = format!(
+                "0x{}{:x}",
+                if prefixed { "cb" } else { "" },
+                instruction_byte
+            );
+            Err(format!("Unkown instruction found for: {}", description))
+        }
+    }
+
     fn from_byte(byte: u8, prefixed: bool) -> Option<Instruction> {
         if prefixed {
             Instruction::from_byte_prefixed(byte)
@@ -183,6 +196,7 @@ impl Instruction {
         match byte {
             0x02 => Some(Instruction::INC(IncDecTarget::BC)),
             0x13 => Some(Instruction::INC(IncDecTarget::DE)),
+            0x81 => Some(Instruction::ADD(ArithmeticTarget::C)),
             _ =>
             /* TODO: Add mapping for rest of instructions */
             {
@@ -192,6 +206,7 @@ impl Instruction {
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub enum ArithmeticTarget {
     A,
     B,
@@ -202,11 +217,13 @@ pub enum ArithmeticTarget {
     L,
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub enum IncDecTarget {
     BC,
     DE,
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub enum PrefixTarget {
     B,
 }
