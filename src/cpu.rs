@@ -33,6 +33,16 @@ impl CPU {
                     }
                 }
             }
+            Instruction::JP(test, address) => {
+                let jump_condition = match test {
+                    JumpTest::NotZero => !self.registers.f.zero,
+                    JumpTest::NotCarry => !self.registers.f.carry,
+                    JumpTest::Zero => self.registers.f.zero,
+                    JumpTest::Carry => self.registers.f.carry,
+                    JumpTest::Always => true,
+                };
+                self.jump(jump_condition, address)
+            }
             _ => {
                 /* TODO: implement other instructions */
                 self.pc
@@ -53,6 +63,22 @@ impl CPU {
 
         new_value
     }
+
+    fn jump(&self, should_jump: bool, address: u16) -> u16 {
+        if should_jump {
+            // Gameboy is little endian so read pc + 2 as most significant bit
+            // and pc + 1 as least significant bit
+            // let least_significant_byte = self.bus.read_byte(self.pc + 1) as u16;
+            // let most_significant_byte = self.bus.read_byte(self.pc + 2) as u16;
+            // (most_significant_byte << 8) | least_significant_byte
+            address
+        } else {
+            // If we don't jump we need to still move the program
+            // counter forward by 3 since the jump instruction is
+            // 3 bytes wide (1 byte for tag and 2 bytes for jump address)
+            self.pc.wrapping_add(3)
+        }
+    }
 }
 
 pub struct MemoryBus {
@@ -66,6 +92,14 @@ impl MemoryBus {
 
     pub fn write_byte(&mut self, address: u16, byte: u8) {
         self.memory[address as usize] = byte;
+    }
+
+    pub fn read_address(&self, address: u16) -> u16 {
+        // Gameboy is little endian so read `address + 1` as most significant bit
+        // and `address` as least significant bit
+        let least_significant_byte = self.read_byte(address) as u16;
+        let most_significant_byte = self.read_byte(address + 1) as u16;
+        (most_significant_byte << 8) | least_significant_byte
     }
 }
 
@@ -151,17 +185,21 @@ pub enum Instruction {
     ADD(ArithmeticTarget),
     INC(IncDecTarget),
     RLC(PrefixTarget),
+    JP(JumpTest, u16),
 }
 
 impl Instruction {
     pub fn read_from_bus(bus: &MemoryBus, pc: u16) -> Result<Instruction, String> {
         let mut instruction_byte = bus.read_byte(pc);
+
+        let mut instruction_address = pc;
         let prefixed = instruction_byte == 0xCB;
         if prefixed {
-            instruction_byte = bus.read_byte(pc + 1);
+            instruction_address += 1;
+            instruction_byte = bus.read_byte(instruction_address);
         }
 
-        if let Some(instruction) = Instruction::from_byte(instruction_byte, prefixed) {
+        if let Some(instruction) = Instruction::from_byte(bus, instruction_address, prefixed) {
             Ok(instruction)
         } else {
             let description = format!(
@@ -173,15 +211,16 @@ impl Instruction {
         }
     }
 
-    fn from_byte(byte: u8, prefixed: bool) -> Option<Instruction> {
+    fn from_byte(bus: &MemoryBus, pc: u16, prefixed: bool) -> Option<Instruction> {
         if prefixed {
-            Instruction::from_byte_prefixed(byte)
+            Instruction::read_prefixed(bus, pc)
         } else {
-            Instruction::from_byte_not_prefixed(byte)
+            Instruction::read_not_prefixed(bus, pc)
         }
     }
 
-    fn from_byte_prefixed(byte: u8) -> Option<Instruction> {
+    fn read_prefixed(bus: &MemoryBus, pc: u16) -> Option<Instruction> {
+        let byte = bus.read_byte(pc);
         match byte {
             0x00 => Some(Instruction::RLC(PrefixTarget::B)),
             _ =>
@@ -192,11 +231,13 @@ impl Instruction {
         }
     }
 
-    fn from_byte_not_prefixed(byte: u8) -> Option<Instruction> {
+    fn read_not_prefixed(bus: &MemoryBus, pc: u16) -> Option<Instruction> {
+        let byte = bus.read_byte(pc);
         match byte {
             0x02 => Some(Instruction::INC(IncDecTarget::BC)),
             0x13 => Some(Instruction::INC(IncDecTarget::DE)),
             0x81 => Some(Instruction::ADD(ArithmeticTarget::C)),
+            0xC2 => Some(Instruction::JP(JumpTest::NotZero, bus.read_address(pc + 1))),
             _ =>
             /* TODO: Add mapping for rest of instructions */
             {
@@ -226,4 +267,13 @@ pub enum IncDecTarget {
 #[derive(Debug, Eq, PartialEq)]
 pub enum PrefixTarget {
     B,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum JumpTest {
+    NotZero,
+    Zero,
+    NotCarry,
+    Carry,
+    Always,
 }

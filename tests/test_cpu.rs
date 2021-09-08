@@ -140,13 +140,27 @@ fn cpu_add_carry() {
 }
 
 #[test]
-fn instruction_add_c_from_byte() {
+fn instruction_add_c_read_from_bus() {
     let mut bus = MemoryBus::default();
     bus.write_byte(0, 0x81);
 
     let actual = Instruction::read_from_bus(&bus, 0);
 
     let expected = Ok(Instruction::ADD(ArithmeticTarget::C));
+
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn instruction_jp_nz_read_from_bus() {
+    let mut bus = MemoryBus::default();
+    bus.write_byte(0, 0xC2);
+    bus.write_byte(1, 0x34);
+    bus.write_byte(2, 0x12);
+
+    let actual = Instruction::read_from_bus(&bus, 0);
+
+    let expected = Ok(Instruction::JP(JumpTest::NotZero, 0x1234));
 
     assert_eq!(expected, actual);
 }
