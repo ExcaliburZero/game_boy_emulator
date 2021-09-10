@@ -18,6 +18,8 @@ impl CPU {
     }
 
     pub fn execute(&mut self, instruction: Instruction) -> u16 {
+        let instruction_len = instruction.len();
+
         match instruction {
             Instruction::ADD(target) => {
                 match target {
@@ -25,7 +27,7 @@ impl CPU {
                         let value = self.registers.c;
                         let new_value = self.add(value);
                         self.registers.a = new_value;
-                        self.pc.wrapping_add(1)
+                        self.pc.wrapping_add(instruction_len)
                     }
                     _ => {
                         /* TODO: implement */
@@ -243,6 +245,17 @@ impl Instruction {
             {
                 None
             }
+        }
+    }
+
+    /// Returns the number of bytes that the instruction takes up. Useful for knowing how far to
+    /// move the program counter after executing the instruction for non-jumping instructions.
+    pub fn len(&self) -> u16 {
+        use Instruction::*;
+
+        match self {
+            ADD(_) => 1,
+            _ => panic!(),
         }
     }
 }
