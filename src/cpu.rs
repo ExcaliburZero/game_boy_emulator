@@ -182,6 +182,10 @@ impl std::convert::From<u8> for FlagsRegister {
     }
 }
 
+/// A GameBoy (DMG) assembly instruction.
+///
+/// See the following link for a table of the instruction opcodes:
+/// <https://www.pastraiser.com/cpu/gameboy/gameboy_opcodes.html>
 #[derive(Debug, Eq, PartialEq)]
 pub enum Instruction {
     ADD(ArithmeticTarget),
@@ -191,6 +195,9 @@ pub enum Instruction {
 }
 
 impl Instruction {
+    /// Reads the Instruction at the given address in the MemoryBus.
+    ///
+    /// If not a valid/known instruction then an error message is returned.
     pub fn read_from_bus(bus: &MemoryBus, pc: u16) -> Result<Instruction, String> {
         let mut instruction_byte = bus.read_byte(pc);
 
