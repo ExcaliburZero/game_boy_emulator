@@ -34,6 +34,7 @@ fn parse_rom(_matches: &ArgMatches, rom_matches: &ArgMatches) {
 
     println!("{}", rom_filepath);
     println!("Title: {}", rom.title);
+    println!("Manufacturer code: {}", rom.manufacturer_code);
 }
 
 fn load_file_bytes(filepath: &str) -> io::Result<Vec<u8>> {
